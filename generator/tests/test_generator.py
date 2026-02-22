@@ -8,7 +8,7 @@ import textwrap
 import pytest
 
 from bio_generator.parser import ParseError, load_protocol
-from bio_generator.codegen import generate_header
+from bio_generator.codegen import generate_header, generate_io_header, generate_to_file
 from bio_generator.types import PRIMITIVES, TypeKind
 
 
@@ -172,7 +172,8 @@ class TestCodegen:
     def _gen(self, tmp_path, yaml_text: str) -> str:
         path = _write_yaml(tmp_path, yaml_text)
         proto = load_protocol(path)
-        return generate_header(proto, source_file="test.yaml")
+        return generate_header(proto, source_file="test.yaml",
+                               io_filename="test_io.hpp")
 
     def test_header_guard(self, tmp_path):
         code = self._gen(tmp_path, """\
@@ -343,8 +344,8 @@ class TestCodegen:
                   - name: x
                     type: u16
         """)
-        assert "bio::BEReader" in code
-        assert "bio::BEWriter" in code
+        assert "BEReader" in code
+        assert "BEWriter" in code
 
     def test_conditional_field(self, tmp_path):
         code = self._gen(tmp_path, """\
@@ -502,9 +503,50 @@ class TestExampleProtocols:
         if not path.exists():
             pytest.skip(f"{path} not found")
         proto = load_protocol(path)
-        code = generate_header(proto, source_file=filename)
-        # Basic sanity: has include guard, includes binary-io, has parse/serialize
+        code = generate_header(proto, source_file=filename,
+                               io_filename="test_io.hpp")
+        # Basic sanity: has include guard, includes io header, has parse/serialize
         assert "#ifndef" in code
-        assert "binary-io.hpp" in code
+        assert '_io.hpp"' in code
         assert "parse" in code
         assert "serialize" in code
+
+    @pytest.mark.parametrize("filename", [
+        "sensor_telemetry.yaml",
+        "command_protocol.yaml",
+    ])
+    def test_example_io_header(self, filename, tmp_path):
+        path = self.PROTOCOLS_DIR / filename
+        if not path.exists():
+            pytest.skip(f"{path} not found")
+        proto = load_protocol(path)
+        io_code = generate_io_header(proto)
+        assert "#ifndef" in io_code
+        assert "Status" in io_code
+        assert "ByteReaderT" in io_code
+        assert "ByteWriterT" in io_code
+        assert "LEReader" in io_code
+        assert "BEReader" in io_code
+        assert "LEWriter" in io_code
+        assert "BEWriter" in io_code
+        if proto.namespace:
+            assert f"namespace {proto.namespace}" in io_code
+
+    @pytest.mark.parametrize("filename", [
+        "sensor_telemetry.yaml",
+        "command_protocol.yaml",
+    ])
+    def test_example_generates_two_files(self, filename, tmp_path):
+        path = self.PROTOCOLS_DIR / filename
+        if not path.exists():
+            pytest.skip(f"{path} not found")
+        proto = load_protocol(path)
+        paths = generate_to_file(proto, tmp_path, source_file=filename)
+        assert len(paths) == 2
+        assert paths[0].name.endswith("_io.hpp")
+        assert paths[1].name.endswith("_protocol.hpp")
+        assert paths[0].exists()
+        assert paths[1].exists()
+        # Protocol header should include the io header
+        proto_code = paths[1].read_text(encoding="utf-8")
+        assert paths[0].name in proto_code

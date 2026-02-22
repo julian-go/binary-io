@@ -60,9 +60,10 @@ def main(argv: List[str] | None = None) -> int:
 
     for proto in protocols:
         source = str(input_path.name)
-        out = generate_to_file(proto, output_dir, source_file=source)
+        paths = generate_to_file(proto, output_dir, source_file=source)
         if args.verbose:
-            print(f"Generated {out}")
+            for p in paths:
+                print(f"Generated {p}")
 
     if args.verbose:
         print(f"Done — {len(protocols)} protocol(s) generated.")
