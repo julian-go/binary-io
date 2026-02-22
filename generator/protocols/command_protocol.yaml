@@ -1,0 +1,118 @@
+# Example: a simple request/response command protocol (big-endian)
+#
+# Demonstrates big-endian byte order, arrays, conditional fields, and
+# nested structs.
+
+protocol:
+  name: CommandProtocol
+  namespace: cmd
+  byte_order: big_endian
+  description: >
+    Simple big-endian command/response protocol for a motor controller.
+
+enums:
+  - name: CommandId
+    type: u16
+    values:
+      - name: Ping
+        value: 0x0001
+      - name: SetSpeed
+        value: 0x0002
+      - name: GetStatus
+        value: 0x0003
+      - name: SetConfig
+        value: 0x0010
+
+  - name: ErrorCode
+    type: u8
+    values:
+      - name: None
+        value: 0
+      - name: InvalidCommand
+        value: 1
+      - name: OutOfRange
+        value: 2
+      - name: Timeout
+        value: 3
+
+  - name: BrakeMode
+    type: u8
+    values:
+      - name: Coast
+        value: 0
+      - name: Brake
+        value: 1
+      - name: HoldPosition
+        value: 2
+
+structs:
+  - name: CommandHeader
+    description: Header for every command/response frame.
+    fields:
+      - name: sync
+        type: u16
+        expected: 0xAA55
+      - name: command
+        type: CommandId
+      - name: payload_size
+        type: u16
+
+  - name: SetSpeedPayload
+    fields:
+      - name: motor_id
+        type: u8
+      - name: target_rpm
+        type: i32
+      - name: ramp_time_ms
+        type: u16
+      - name: options
+        type: bitfield_u16
+        description: Motor control options.
+        bits:
+          - name: direction
+            offset: 0
+            width: 1
+            description: "0 = forward, 1 = reverse."
+          - name: brake_mode
+            offset: 1
+            width: 2
+            type: BrakeMode
+            description: Brake mode selector.
+          - name: acceleration_profile
+            offset: 3
+            width: 5
+            description: Acceleration curve index.
+
+  - name: ConfigEntry
+    description: A single key-value configuration parameter.
+    fields:
+      - name: key
+        type: u16
+      - name: value
+        type: u32
+
+  - name: SetConfigPayload
+    description: Write up to 8 configuration entries.
+    fields:
+      - name: entry_count
+        type: u8
+      - name: entries
+        type: array
+        element_type: ConfigEntry
+        length: 8
+
+  - name: StatusResponse
+    description: Response to GetStatus command.
+    fields:
+      - name: error
+        type: ErrorCode
+      - name: motor_count
+        type: u8
+      - name: rpms
+        type: array
+        element_type: i32
+        length: 4
+      - name: voltage
+        type: f32
+      - name: current
+        type: f32

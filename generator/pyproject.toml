@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bio-generator"
+version = "0.1.0"
+description = "Generate C++17 binary protocol parsers/serializers from YAML definitions using binary-io.hpp"
+requires-python = ">=3.9"
+dependencies = ["pyyaml>=6.0", "jsonschema>=4.0", "jinja2>=3.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0"]
+
+[project.scripts]
+bio-gen = "bio_generator.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -66,3 +66,9 @@ packagecache
 
 # Subprojects
 subprojects/doctest
+
+# Generator
+generator/generated/
+*.egg-info/
+*.egg
+*.whl

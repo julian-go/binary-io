@@ -1,0 +1,127 @@
+# Example: a simple sensor telemetry protocol (little-endian)
+#
+# This demonstrates the YAML schema for defining binary protocols.
+# Run:  bio-gen protocols/ -o generated/
+
+protocol:
+  name: SensorTelemetry
+  namespace: sensor
+  byte_order: little_endian
+  description: >
+    A simple sensor telemetry protocol for reading temperature, humidity,
+    and accelerometer data from an embedded device.
+
+enums:
+  - name: MessageType
+    type: u8
+    description: Identifies the kind of message in a frame.
+    values:
+      - name: Heartbeat
+        value: 0x00
+        description: Keep-alive, no payload.
+      - name: Temperature
+        value: 0x01
+      - name: Humidity
+        value: 0x02
+      - name: Accelerometer
+        value: 0x03
+      - name: Log
+        value: 0x10
+        description: Variable-length text log entry.
+
+  - name: StatusFlags
+    type: u8
+    description: Device status bit-flags.
+    values:
+      - name: Ok
+        value: 0x00
+      - name: LowBattery
+        value: 0x01
+      - name: SensorError
+        value: 0x02
+      - name: Overheating
+        value: 0x04
+
+structs:
+  - name: FrameHeader
+    description: >
+      Fixed-size header that precedes every message on the wire.
+    fields:
+      - name: magic
+        type: u32
+        expected: 0xFEEDFACE
+        description: Magic number for frame synchronization.
+      - name: version
+        type: u8
+        description: Protocol version (currently 1).
+      - name: msg_type
+        type: MessageType
+        description: Payload type discriminator.
+      - name: status
+        type: StatusFlags
+      - name: config
+        type: bitfield_u8
+        description: Device configuration register.
+        bits:
+          - name: sample_rate
+            offset: 0
+            width: 3
+            description: Sampling rate selector (0-7).
+          - name: filter_enable
+            offset: 3
+            width: 1
+            description: Low-pass filter enable.
+          - name: channel
+            offset: 4
+            width: 4
+            description: Active channel selector.
+      - name: reserved
+        type: padding
+        pad_size: 1
+      - name: sequence
+        type: u16
+        description: Monotonically increasing frame counter.
+      - name: payload_length
+        type: u16
+        description: Byte length of the payload that follows.
+
+  - name: TemperaturePayload
+    description: Single temperature reading.
+    fields:
+      - name: sensor_id
+        type: u8
+      - name: temperature
+        type: f32
+        description: Degrees Celsius.
+
+  - name: AccelerometerPayload
+    description: Three-axis accelerometer sample.
+    fields:
+      - name: sensor_id
+        type: u8
+      - name: x
+        type: f32
+      - name: y
+        type: f32
+      - name: z
+        type: f32
+
+  - name: LogPayload
+    description: Fixed-size log message (up to 128 chars).
+    fields:
+      - name: log_level
+        type: u8
+      - name: message
+        type: string
+        length: 128
+
+  - name: SensorFrame
+    description: >
+      A complete wire frame: header followed by a fixed-size payload buffer.
+    fields:
+      - name: header
+        type: FrameHeader
+      - name: data
+        type: bytes
+        length: 256
+        description: Fixed payload buffer (interpret based on header.msg_type).
