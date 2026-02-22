@@ -7,5 +7,8 @@ doctest_dep = doctest_proj.get_variable('doctest_dep')
 # binary-io headers only
 subdir('include')
 
+# examples
+subdir('examples')
+
 # tests
 subdir('tests')

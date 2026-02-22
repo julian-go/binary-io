@@ -522,6 +522,11 @@ class ByteWriterT {
   size_t size_;  ///< Total buffer size.
 };
 
-} // namespace bio
+using LEReader = ByteReaderT<LittleEndianCodec>;
+using BEReader = ByteReaderT<BigEndianCodec>;
+using LEWriter = ByteWriterT<LittleEndianCodec>;
+using BEWriter = ByteWriterT<BigEndianCodec>;
 
-#endif // !BINARYIO_BINARYIO_HPP_
+}  // namespace bio
+
+#endif  // !BINARYIO_BINARYIO_HPP_
